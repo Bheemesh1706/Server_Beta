@@ -51,10 +51,10 @@ class Server_Response
 	def prepare_response(request)
 		
 		@path = request.fetch(:path)
-	   
-		if @path == "/"
-			respond_with(SERVER_ROOT+"INDEX.html")
+		if @path == "/"         
+			respond_with(SERVER_ROOT+"/INDEX.html")
 		else 
+			
 			respond_with(SERVER_ROOT+@path)
 		end
 	end
@@ -78,7 +78,7 @@ class Server_Response
 
 	def file_type(path)
 
-		if Dir.exist?(path) || File.extname(path) == ".html"
+		if Dir.exist?(path) || File.extname(path) == ".html" || path == "/"
 			return "text/html"
 		else
 			return "text/plain"
@@ -96,7 +96,7 @@ class Response
 
         def initialize(code:, data:"", type:"")
                 @response = "HTTP/1.1 #{code}\r\n" + "Content-Length: #{data.size}\r\n"+ "Content-Type: #{type}\r\n" +"\r\n"+"#{data}\r\n"
-                @code= code
+		@code= code
         end
 
         def send(client)
@@ -110,6 +110,7 @@ loop {
   #Getting the list of the present directory
 	list = `ls`
 	list = list.split() 
+	puts list
 
   #Creating objects for handling server response and request
 	noob = Server_Request.new;
@@ -145,7 +146,6 @@ loop {
 
   #Recieveing the http  request   
 	request = client.readpartial(2048)
-
   #Parsing the request and preparing the response for the request
 	request = noob.parse(request)
 
