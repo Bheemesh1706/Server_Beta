@@ -1,8 +1,9 @@
 require 'socket'
 require 'erb'
-
+	
         server = TCPServer.new('localhost',3000)
-
+	list=nil
+	a=0
 # Class for parsing the request
 class Server_Request
 
@@ -51,7 +52,7 @@ class Server_Response
 	def prepare_response(request)
 		
 		@path = request.fetch(:path)
-		if @path == "/"         
+		if @path == "/" || Dir.exist?(@path)         
 			respond_with(SERVER_ROOT+"/INDEX.html")
 		else 
 			
@@ -61,8 +62,12 @@ class Server_Response
 
 	def respond_with(path)
 
-		if File.exist?(path)
+		if File.exist?(path) && Dir.exist?(path) == false
 			send_ok_response(File.binread(path))
+	#	elsif Dir.exist?(path)
+			#path = path + "/INDEX.html"
+	#		send_ok_response(File.binread("INDEX.html"))
+			
 		else
 			send_file_not_found
 		end
@@ -96,6 +101,7 @@ class Response
 
         def initialize(code:, data:"", type:"")
                 @response = "HTTP/1.1 #{code}\r\n" + "Content-Length: #{data.size}\r\n"+ "Content-Type: #{type}\r\n" +"\r\n"+"#{data}\r\n"
+		puts @response
 		@code= code
         end
 
@@ -104,50 +110,68 @@ class Response
         end
 end
 
+class Template
+	
+	attr_reader :list
+	
+	attr_accessor :path
+	
+	def initialize(path)
+		@list=`ls -A #{path}`.split()
+		@path=path
+	end
 
+	def get_template(list,path)
+		%{ <html>
+                        <head>
+                                <h1> Directory: <%= path %> </h1>
+                        </head>
+                        <body>
+                                <hr>
+                                        <ul>
+                                                <% list.each do |a| %>
+                                                        <li> <a href="<%= a %>"> <%= a %> </a>
+                                                <% end %>
+                                        </ul>
+
+                                <hr>
+                        </body>
+                  </html>  }
+	end
+
+	def render_template(template)
+
+		render = ERB.new(template)
+		
+		file = File.open("INDEX.html","w")
+
+		file.write("INDEX.html",render.result())
+
+		file.close
+
+	end
+
+
+end
+
+
+
+# Note : Inherit Template class into response class
+# to complete it.
 loop {
  
-  #Getting the list of the present directory
-	list = `ls`
-	list = list.split() 
-	puts list
-
   #Creating objects for handling server response and request
 	noob = Server_Request.new;
 	boon = Server_Response.new;
 
   #Initiating the server
 	client = server.accept
-
-  #Generating Template to display the list
-	        temp = %{ <html>
-                        <head>
-				<h1> Directory: <%= Dir.pwd %> </h1>
-                        </head>
-			<body>
-				<hr>
-			
-					<ul>
-						<li> <a href="server.rb"> server.rb</a>
-					</ul>
-
-				<hr>
-			</body>
-                  </html>  }
-
-        render = ERB.new(temp)
-
-  #Storing the tmeplate file in a html file to show the result
- 	file = File.open("INDEX.html","w")
-
-	file.write("INDEX.html",render.result())
-
-	file.close
-
   #Recieveing the http  request   
 	request = client.readpartial(2048)
+	puts request
   #Parsing the request and preparing the response for the request
 	request = noob.parse(request)
+	
 
 	response= boon.prepare_response(request)
 
