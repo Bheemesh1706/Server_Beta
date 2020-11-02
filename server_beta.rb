@@ -1,9 +1,18 @@
 require 'socket'
 require 'erb'
 	
-        server = TCPServer.new('localhost',3000)
-	list=nil
-	a=0
+
+	if ( (ARGV[0].to_i.is_a? (Integer ) )&&  (ARGV[0].to_i >= 8000) )
+        	server = TCPServer.new('localhost',ARGV[0])
+		puts ""
+		puts "localhost is running on port: #{ARGV[0]} \n\n"
+	else
+		server = TCPServer.new('localhost',3000)
+		puts ""
+		puts "localhost is running on default port: 3000 \n\n"
+
+	end
+
 # Class for parsing the request
 class Server_Request
 
@@ -40,33 +49,44 @@ end
 
 #Class for preparing the response
 class Server_Response
-	
-	SERVER_ROOT = Dir.pwd
-	
+		
+	SERVER_ROOT = Dir.pwd	
+	@@server_dir = SERVER_ROOT
+	@@dir_list = []
+
 	attr_accessor :path
 
 	def initialize
 		@path
+		@template
 	end
 
 	def prepare_response(request)
-		
-		@path = request.fetch(:path)
-		if @path == "/" || Dir.exist?(@path)         
+	 			
+
+		if request.fetch(:path) == "/"
+			@path = SERVER_ROOT
+		else 
+			@path = request.fetch(:path)
+		end
+
+
+		if Dir.exist?(@path)
+			@template = Template.new(@path)
+			@template.render_template(@template.get_template())
+
 			respond_with(SERVER_ROOT+"/INDEX.html")
 		else 
 			
-			respond_with(SERVER_ROOT+@path)
+			respond_with(@path)
 		end
+
 	end
 
 	def respond_with(path)
 
-		if File.exist?(path) && Dir.exist?(path) == false
+		if File.exist?(path) && Dir.exist?(path) == false 
 			send_ok_response(File.binread(path))
-	#	elsif Dir.exist?(path)
-			#path = path + "/INDEX.html"
-	#		send_ok_response(File.binread("INDEX.html"))
 			
 		else
 			send_file_not_found
@@ -82,8 +102,7 @@ class Server_Response
 	end
 
 	def file_type(path)
-
-		if Dir.exist?(path) || File.extname(path) == ".html" || path == "/"
+		if Dir.exist?(path) || File.extname(path) == ".html" 
 			return "text/html"
 		else
 			return "text/plain"
@@ -110,33 +129,35 @@ class Response
         end
 end
 
-class Template
+class Template 
 	
-	attr_reader :list
+#	attr_reader :list
 	
-	attr_accessor :path
+	attr_accessor :path , :list
 	
 	def initialize(path)
-		@list=`ls -A #{path}`.split()
 		@path=path
+		@list=`ls -A #{@path}`.split()
 	end
 
-	def get_template(list,path)
-		%{ <html>
+	def get_template()
+		temp = %{ <html>
                         <head>
-                                <h1> Directory: <%= path %> </h1>
+                                <h1> Directory: <%= @path %> </h1>
                         </head>
                         <body>
                                 <hr>
                                         <ul>
-                                                <% list.each do |a| %>
-                                                        <li> <a href="<%= a %>"> <%= a %> </a>
+						<%  @list.each do |val|  %>
+								<li> <a href="<%= @path %>/<%= val %>"> <%= val %> </a>
                                                 <% end %>
                                         </ul>
 
                                 <hr>
                         </body>
                   </html>  }
+
+		  temp
 	end
 
 	def render_template(template)
@@ -145,7 +166,7 @@ class Template
 		
 		file = File.open("INDEX.html","w")
 
-		file.write("INDEX.html",render.result())
+		file.write("INDEX.html",render.result(binding))
 
 		file.close
 
@@ -156,8 +177,7 @@ end
 
 
 
-# Note : Inherit Template class into response class
-# to complete it.
+# Note :Change the server_root to var from const .
 loop {
  
   #Creating objects for handling server response and request
@@ -168,7 +188,6 @@ loop {
 	client = server.accept
   #Recieveing the http  request   
 	request = client.readpartial(2048)
-	puts request
   #Parsing the request and preparing the response for the request
 	request = noob.parse(request)
 	
