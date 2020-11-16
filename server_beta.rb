@@ -13,6 +13,9 @@ require 'erb'
 
 	end
 
+
+
+
 # Class for parsing the request
 class Server_Request
 
@@ -51,8 +54,6 @@ end
 class Server_Response
 		
 	SERVER_ROOT = Dir.pwd	
-	@@server_dir = SERVER_ROOT
-	@@dir_list = []
 
 	attr_accessor :path
 
@@ -75,7 +76,7 @@ class Server_Response
 			@template = Template.new(@path)
 			@template.render_template(@template.get_template())
 
-			respond_with(SERVER_ROOT+"/INDEX.html")
+			respond_with(SERVER_ROOT+"/Server_Beta.html")
 		else 
 			
 			respond_with(@path)
@@ -102,7 +103,7 @@ class Server_Response
 	end
 
 	def file_type(path)
-		if Dir.exist?(path) || File.extname(path) == ".html" 
+		if Dir.exist?(path) || File.extname(path) == ".html" #need to change this a regrex 
 			return "text/html"
 		else
 			return "text/plain"
@@ -164,9 +165,9 @@ class Template
 
 		render = ERB.new(template)
 		
-		file = File.open("INDEX.html","w")
+		file = File.open("Server_Beta.html","w")
 
-		file.write("INDEX.html",render.result(binding))
+		file.write("Server_Beta.html",render.result(binding))
 
 		file.close
 
@@ -177,32 +178,39 @@ end
 
 
 
-# Note :Change the server_root to var from const .
 loop {
+	`touch Server_Beta.html`
  
-  #Creating objects for handling server response and request
-	noob = Server_Request.new;
-	boon = Server_Response.new;
 
-  #Initiating the server
-	client = server.accept
-  #Recieveing the http  request   
-	request = client.readpartial(2048)
-  #Parsing the request and preparing the response for the request
-	request = noob.parse(request)
+	begin
+
+		  #Creating objects for handling server response and request
+			noob = Server_Request.new;
+			boon = Server_Response.new;
+
+ 	 	#Initiating the server
+			client = server.accept
+  		#Recieveing the http  request   
+			request = client.readpartial(2048) #need to deal with exception
+ 	 	#Parsing the request and preparing the response for the request
+			request = noob.parse(request)
 	
 
-	response= boon.prepare_response(request)
+			response= boon.prepare_response(request)
 
-
-	puts "#{client.peeraddr[3]} #{request.fetch(:path)} - #{response.code}"
-
+	
+			puts "#{client.peeraddr[3]} #{request.fetch(:path)} - #{response.code}"
   
-	response.send(client)
+			response.send(client)
+
+	rescue StandardError => e  
+
+			client.write(e.message)
   
-	client.close
+			client.close
+	end
 
-
+	`rm Server_Beta.html`
 }
 
 
