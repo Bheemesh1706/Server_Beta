@@ -14,7 +14,7 @@ Installation Command :
   
 ```
 
-      ```Usage : ruby Server_Beta.rb port_number```
+``` Usage : ruby Server_Beta.rb port_number ```
       
 
 In the place of port_number enter the port on which you want to run the server. By default the server runs in port 3000.
